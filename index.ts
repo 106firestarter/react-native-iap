@@ -185,6 +185,12 @@ function checkNativeAndroidAvailable(myRNIapModule: any): Promise<void> {
   }
 }
 
+function checkNativeAndroidAmazonAvailable(): Promise<void> {
+  if (!RNIapAmazonModule) {
+    return Promise.reject(new Error(IAPErrorCode.E_IAP_NOT_AVAILABLE));
+  }
+}
+
 function checkNativeiOSAvailable(): Promise<void> {
   if (!RNIapIos) {
     return Promise.reject(new Error(IAPErrorCode.E_IAP_NOT_AVAILABLE));
