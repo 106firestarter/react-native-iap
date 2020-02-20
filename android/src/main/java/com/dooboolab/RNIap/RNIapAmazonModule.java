@@ -48,10 +48,27 @@ import com.amazon.device.iap.model.FulfillmentResult;
 public class RNIapAmazonModule extends ReactContextBaseJavaModule {
   final String TAG = "RNIapAmazonModule";
 
-  public static final String PROMISE_BUY_ITEM = "PROMISE_BUY_ITEM";
-  public static final String PROMISE_GET_PRODUCT_DATA = "PROMISE_GET_PRODUCT_DATA";
-  public static final String PROMISE_QUERY_PURCHASES = "PROMISE_QUERY_PURCHASES";
-  public static final String PROMISE_GET_USER_DATA = "PROMISE_GET_USER_DATA";
+  private static final String PROMISE_BUY_ITEM = "PROMISE_BUY_ITEM";
+  private static final String PROMISE_GET_PRODUCT_DATA = "PROMISE_GET_PRODUCT_DATA";
+  private static final String PROMISE_QUERY_PURCHASES = "PROMISE_QUERY_PURCHASES";
+
+  private ReactContext reactContext;
+  private List<Product> skus;
+
+  private PurchasingListener purchasingListener = new PurchasingListener() {
+    //final String TAG = "RNIapAmazonModule:listener";
+    @Override
+    public void onProductDataResponse(final ProductDataResponse response) {
+      final ProductDataResponse.RequestStatus status = response.getRequestStatus();
+      final String requestId = response.getRequestId().toString();
+      Log.d(TAG, "onProductDataResponse: " + requestId + " (" + status + ")");
+
+      switch(status) {
+        case SUCCESSFUL:
+          final Map<String, Product> productData = response.getProductData();
+          final Set<String> unavailableSkus = response.getUnavailableSkus();
+
+          WritableNativeArray items = new WritableNativeArray();
 
   private final ReactContext reactContext;
 
@@ -62,27 +79,110 @@ public class RNIapAmazonModule extends ReactContextBaseJavaModule {
     super(reactContext);
     this.reactContext = reactContext;
 
-    lifecycleEventListener = new LifecycleEventListener() {
-      @Override
-      public void onHostResume() {
-        if (purchasingListener == null) {
-          purchasingListener = new RNIapAmazonListener(reactContext);
-          PurchasingService.registerListener(reactContext, purchasingListener);
-        }
-        //PurchasingService.getPurchaseUpdates(false);
+            WritableMap item = Arguments.createMap();
+            final String sku = product.getSku();
+            item.putString("productId", product.getSku());
+            item.putString("price", priceNumber.toString());
+            item.putString("currency", product.getPrice().substring(0, 1));
+            item.putString("type", productTypeString);
+            item.putString("localizedPrice", product.getPrice());
+            item.putString("title", product.getTitle());
+            item.putString("description", product.getDescription());
+            item.putNull("introductoryPrice");
+            item.putNull("subscriptionPeriodAndroid");
+            item.putNull("freeTrialPeriodAndroid");
+            item.putNull("introductoryPriceCyclesAndroid");
+            item.putNull("introductoryPricePeriodAndroid");
+            item.putString("iconUrl", product.getSmallIconUrl());
+            item.putString("originalJson", product.toString());
+            item.putString("originalPrice", product.getPrice());
+            items.pushMap(item);
+          }
+          DoobooUtils.getInstance().resolvePromisesForKey(PROMISE_GET_PRODUCT_DATA, items);
+          break;
+        case FAILED:
+          DoobooUtils.getInstance().rejectPromisesForKey(PROMISE_GET_PRODUCT_DATA, null, null, null);
+          break;
+        case NOT_SUPPORTED:
+          DoobooUtils.getInstance().rejectPromisesForKey(PROMISE_GET_PRODUCT_DATA, null, "not supported", null);
+          break;
       }
+    }
 
-      @Override
-      public void onHostPause() {
-      }
+    @Override
+    public void onPurchaseUpdatesResponse(final PurchaseUpdatesResponse response) {
+      //Log.d(TAG, "onPurchaseUpdatesResponse: requestId (" + response.getRequestId()
+      //             + ") purchaseUpdatesResponseStatus (" + response.getRequestStatus()
+      //             + ") userId (" + response.getUserData().getUserId() + ")");
+      Log.d(TAG, "onPurchaseUpdatesResponse: " + response.toString());
+      final PurchaseUpdatesResponse.RequestStatus status = response.getRequestStatus();
+      switch(status) {
+        case SUCCESSFUL:
+          ArrayList<Receipt> unacknowledgedPurchases = new ArrayList<>();
+          List<Receipt> purchases = response.getReceipts();
+          for (Receipt receipt : purchases) {
+            unacknowledgedPurchases.add(receipt);
+            Log.d(TAG, "receipt: " + receipt.toString());
+            WritableMap item = Arguments.createMap();
+            item.putString("productId", receipt.getSku());
+            //item.putString("transactionId", purchase.getOrderId());
+            item.putDouble("transactionDate", receipt.getPurchaseDate().getTime());
+            //item.putString("transactionReceipt", purchase.getOriginalJson());
+            item.putString("purchaseToken", receipt.getReceiptId());
+            //item.putString("dataAndroid", purchase.getOriginalJson());
+            //item.putString("signatureAndroid", purchase.getSignature());
+            //item.putBoolean("autoRenewingAndroid", purchase.isAutoRenewing());
+            //item.putBoolean("isAcknowledgedAndroid", purchase.isAcknowledged());
+            //item.putInt("purchaseStateAndroid", purchase.getPurchaseState());
+            item.putString("useridAmazon", response.getUserData().getUserId());
+            item.putString("userMarketplaceAmazon", response.getUserData().getMarketplace());
 
-      @Override
-      public void onHostDestroy() {
-        if (purchasingListener != null) {
-          purchasingListener = null;
-        }
+            sendEvent(reactContext, "purchase-updated", item);
+          }
+          DoobooUtils.getInstance().resolvePromisesForKey(PROMISE_BUY_ITEM, unacknowledgedPurchases);
+          DoobooUtils.getInstance().resolvePromisesForKey(PROMISE_QUERY_PURCHASES, true);
+          break;
+        case FAILED:
+          DoobooUtils.getInstance().rejectPromisesForKey(PROMISE_QUERY_PURCHASES, null, null, null);
+          break;
       }
-    };
+    }
+
+    @Override
+    public void onPurchaseResponse(final PurchaseResponse response) {
+      final String requestId = response.getRequestId().toString();
+      final String userId = response.getUserData().getUserId();
+      final PurchaseResponse.RequestStatus status = response.getRequestStatus();
+      //Log.d(TAG, "onPurchaseResponse: requestId (" + requestId + ") userId ("
+      //             + userId + ") purchaseRequestStatus (" + status + ")");
+      Log.d(TAG, "onPurchaseResponse: " + response.toString());
+      switch(status) {
+        case SUCCESSFUL:
+          Receipt receipt = response.getReceipt();
+          WritableMap item = Arguments.createMap();
+          item.putString("productId", receipt.getSku());
+          item.putDouble("transactionDate", receipt.getPurchaseDate().getTime());
+          item.putString("purchaseToken", receipt.getReceiptId());
+          item.putString("useridAmazon", response.getUserData().getUserId());
+          item.putString("userMarketplaceAmazon", response.getUserData().getMarketplace());
+          sendEvent(reactContext, "purchase-updated", item);
+
+          DoobooUtils.getInstance().resolvePromisesForKey(PROMISE_GET_PRODUCT_DATA, true);
+          break;
+        case FAILED:
+          DoobooUtils.getInstance().rejectPromisesForKey(PROMISE_BUY_ITEM, null, null, null);
+          break;
+      }
+    }
+
+    @Override
+    public void onUserDataResponse(final UserDataResponse response) {
+      //Log.d(TAG, "onGetUserDataResponse: requestId (" + response.getRequestId()
+      //             + ") userIdRequestStatus: " + response.getRequestStatus() + ")");
+      Log.d(TAG, "onGetUserDataResponse: " + response.toString());
+      final UserDataResponse.RequestStatus status = response.getRequestStatus();
+    }
+  };
 
     reactContext.addLifecycleEventListener(lifecycleEventListener);
   }

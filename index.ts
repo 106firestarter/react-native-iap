@@ -146,30 +146,10 @@ export function setInstallSourceAndroid(installSourceAndroid: InstallSourceAndro
   iapInstallSourceAndroid = installSourceAndroid;
 }
 
-export function getInstallSourceAndroid(): InstallSourceAndroid {
-  return iapInstallSourceAndroid;
-}
-
-async function detectInstallSourceAndroid() {
-  const detectedInstallSourceAndroid = await RNIapModule.getInstallSource();
-  console.debug("RNIap: detected", detectedInstallSourceAndroid);
-  let newInstallSourceAndroid = iapFallbackInstallSourceAndroid;
-  switch (detectedInstallSourceAndroid) {
-    case "GOOGLE_PLAY":
-      newInstallSourceAndroid = InstallSourceAndroid.GOOGLE_PLAY;
-      break;
-    case "AMAZON":
-      newInstallSourceAndroid = InstallSourceAndroid.AMAZON;
-      break;
-  }
-  setInstallSourceAndroid(newInstallSourceAndroid);
-}
-
 function getAndroidModule(): any {
   let myRNIapModule = null;
-  console.debug("RNIap: using ", iapInstallSourceAndroid);
-  switch(iapInstallSourceAndroid) {
-    case InstallSourceAndroid.AMAZON:
+  switch(iapCustomPlatform) {
+    case CustomPlatform.AMAZON:
       myRNIapModule = RNIapAmazonModule;
       break;
     default:
@@ -181,12 +161,6 @@ function getAndroidModule(): any {
 
 function checkNativeAndroidAvailable(myRNIapModule: any): Promise<void> {
   if (!myRNIapModule) {
-    return Promise.reject(new Error(IAPErrorCode.E_IAP_NOT_AVAILABLE));
-  }
-}
-
-function checkNativeAndroidAmazonAvailable(): Promise<void> {
-  if (!RNIapAmazonModule) {
     return Promise.reject(new Error(IAPErrorCode.E_IAP_NOT_AVAILABLE));
   }
 }
@@ -209,7 +183,6 @@ export const initConnection = (): Promise<boolean> =>
       return RNIapIos.canMakePayments();
     },
     android: async () => {
-      await detectInstallSourceAndroid();
       const myRNIapModule = getAndroidModule();
       if (!RNIapModule || !RNIapAmazonModule) {
         return Promise.resolve();
@@ -250,8 +223,8 @@ export const endConnectionAndroid = (): Promise<void> => {
   return Platform.select({
     ios: async () => Promise.resolve(),
     android: async () => {
-      switch(iapInstallSourceAndroid) {
-        case InstallSourceAndroid.AMAZON:
+      switch(iapCustomPlatform) {
+        case CustomPlatform.AMAZON:
           return Promise.resolve();
         default:
           if (!RNIapModule) {
