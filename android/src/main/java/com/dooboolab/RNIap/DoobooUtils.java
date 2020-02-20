@@ -274,16 +274,15 @@ public class DoobooUtils {
     Context appContext = context.getApplicationContext();
     PackageManager pkgManager = appContext.getPackageManager();
     String installerPackageName = pkgManager.getInstallerPackageName(appContext.getPackageName());
-    Log.d(TAG, "Installer source: " + installerPackageName);
     if (installerPackageName == null) {
-      return APPSTORE_UNKNOWN;
+      return "DEV";
     } else if ("com.android.vending".equals(installerPackageName)) {
-      return APPSTORE_GOOGLE;
+      return "GOOGLE_PLAY";
     } else if (installerPackageName.startsWith("com.amazon.")) {
-      return APPSTORE_AMAZON;
+      return "AMAZON";
     } else {
       Log.d(TAG, "Unknown installer source: " + installerPackageName);
     }
-    return APPSTORE_UNKNOWN;
+    return null;
   }
 }

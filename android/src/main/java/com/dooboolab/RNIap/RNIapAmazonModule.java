@@ -64,7 +64,6 @@ public class RNIapAmazonModule extends ReactContextBaseJavaModule {
   private List<Product> skus;
 
   private PurchasingListener purchasingListener = new PurchasingListener() {
-    //final String TAG = "RNIapAmazonModule:listener";
     @Override
     public void onProductDataResponse(final ProductDataResponse response) {
       final ProductDataResponse.RequestStatus status = response.getRequestStatus();
@@ -220,6 +219,7 @@ public class RNIapAmazonModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void initConnection(final Promise promise) {
+    DoobooUtils.getInstance().getInstallSource(reactContext);
     promise.resolve(true);
   }
 

@@ -148,8 +148,9 @@ export function setInstallSourceAndroid(installSourceAndroid: InstallSourceAndro
 
 function getAndroidModule(): any {
   let myRNIapModule = null;
-  switch(iapCustomPlatform) {
-    case CustomPlatform.AMAZON:
+  (iapInstallSource == InstallSource.NOT_SET) && detectPlatform();
+  switch(iapInstallSource) {
+    case InstallSource.AMAZON:
       myRNIapModule = RNIapAmazonModule;
       break;
     default:
@@ -223,8 +224,8 @@ export const endConnectionAndroid = (): Promise<void> => {
   return Platform.select({
     ios: async () => Promise.resolve(),
     android: async () => {
-      switch(iapCustomPlatform) {
-        case CustomPlatform.AMAZON:
+      switch(iapInstallSource) {
+        case InstallSource.AMAZON:
           return Promise.resolve();
         default:
           if (!RNIapModule) {
