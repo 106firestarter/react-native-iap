@@ -135,20 +135,39 @@ export enum InstallSourceAndroid {
   AMAZON = 2,
 }
 
-let iapInstallSourceAndroid = InstallSourceAndroid.NOT_SET;
-let iapFallbackInstallSourceAndroid = InstallSourceAndroid.GOOGLE_PLAY;
+let iapInstallSource = InstallSource.NOT_SET;
+let iapInstallSourceFallback = InstallSource.GOOGLE_PLAY;
 
-export function setFallbackInstallSourceAndroid(installSourceAndroid: InstallSourceAndroid): void {
-  iapFallbackInstallSourceAndroid = installSourceAndroid;
+export function setInstallSourceFallback(installSource: InstallSource): void {
+  iapInstallSourceFallback = installSource;
 }
 
-export function setInstallSourceAndroid(installSourceAndroid: InstallSourceAndroid): void {
-  iapInstallSourceAndroid = installSourceAndroid;
+export function setInstallSource(installSource: InstallSource): void {
+  iapInstallSource = installSource;
+}
+
+export function getCustomPatform(): InstallSource {
+  return iapInstallSource;
+}
+
+function detectPlatform(): void {
+  const detectedInstallSource = RNIapModule.getInstallSource();
+  let newInstallSource = iapInstallSourceFallback;
+  switch (detectedInstallSource) {
+    case "GOOGLE_PLAY":
+      newInstallSource = InstallSource.GOOGLE_PLAY;
+      break;
+    case "AMAZON":
+      newInstallSource = InstallSource.AMAZON;
+      break;
+  }
+  setInstallSource(newInstallSource);
 }
 
 function getAndroidModule(): any {
   let myRNIapModule = null;
-  (iapInstallSource == InstallSource.NOT_SET) && detectPlatform();
+  (iapInstallSource === InstallSource.NOT_SET) && detectPlatform();
+  console.debug("RNIap: using ", iapInstallSource);
   switch(iapInstallSource) {
     case InstallSource.AMAZON:
       myRNIapModule = RNIapAmazonModule;
