@@ -146,7 +146,7 @@ export function setInstallSource(installSource: InstallSource): void {
   iapInstallSource = installSource;
 }
 
-export function getCustomPatform(): InstallSource {
+export function getInstallSource(): InstallSource {
   return iapInstallSource;
 }
 
