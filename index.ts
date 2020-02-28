@@ -152,6 +152,7 @@ export function getInstallSourceAndroid(): InstallSourceAndroid {
 
 async function detectInstallSourceAndroid() {
   const detectedInstallSourceAndroid = await RNIapModule.getInstallSource();
+  console.debug("RNIap: detected", detectedInstallSourceAndroid);
   let newInstallSourceAndroid = iapFallbackInstallSourceAndroid;
   switch (detectedInstallSourceAndroid) {
     case "GOOGLE_PLAY":
