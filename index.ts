@@ -135,43 +135,40 @@ export enum InstallSourceAndroid {
   AMAZON = 2,
 }
 
-let iapInstallSource = InstallSource.NOT_SET;
-let iapInstallSourceFallback = InstallSource.GOOGLE_PLAY;
+let iapInstallSourceAndroid = InstallSourceAndroid.NOT_SET;
+let iapFallbackInstallSourceAndroid = InstallSourceAndroid.GOOGLE_PLAY;
 
-export function setInstallSourceFallback(installSource: InstallSource): void {
-  iapInstallSourceFallback = installSource;
+export function setFallbackInstallSourceAndroid(installSourceAndroid: InstallSourceAndroid): void {
+  iapFallbackInstallSourceAndroid = installSourceAndroid;
 }
 
-export function setInstallSource(installSource: InstallSource): void {
-  iapInstallSource = installSource;
+export function setInstallSourceAndroid(installSourceAndroid: InstallSourceAndroid): void {
+  iapInstallSourceAndroid = installSourceAndroid;
 }
 
-export function getInstallSource(): InstallSource {
-  return iapInstallSource;
+export function getInstallSourceAndroid(): InstallSourceAndroid {
+  return iapInstallSourceAndroid;
 }
 
-function detectInstallSource(): void {
-  const detectedInstallSource = RNIapModule.getInstallSource();
-  let newInstallSource = iapInstallSourceFallback;
-  switch (detectedInstallSource) {
+async function detectInstallSourceAndroid() {
+  const detectedInstallSourceAndroid = await RNIapModule.getInstallSource();
+  let newInstallSourceAndroid = iapFallbackInstallSourceAndroid;
+  switch (detectedInstallSourceAndroid) {
     case "GOOGLE_PLAY":
-      newInstallSource = InstallSource.GOOGLE_PLAY;
+      newInstallSourceAndroid = InstallSourceAndroid.GOOGLE_PLAY;
       break;
     case "AMAZON":
-      newInstallSource = InstallSource.AMAZON;
+      newInstallSourceAndroid = InstallSourceAndroid.AMAZON;
       break;
   }
-  setInstallSource(newInstallSource);
+  setInstallSourceAndroid(newInstallSourceAndroid);
 }
 
 function getAndroidModule(): any {
   let myRNIapModule = null;
-  if (iapInstallSource === InstallSource.NOT_SET) {
-    detectInstallSource();
-  }
-  console.debug("RNIap: using ", iapInstallSource, iapInstallSource);
-  switch(iapInstallSource) {
-    case InstallSource.AMAZON:
+  console.debug("RNIap: using ", iapInstallSourceAndroid);
+  switch(iapInstallSourceAndroid) {
+    case InstallSourceAndroid.AMAZON:
       myRNIapModule = RNIapAmazonModule;
       break;
     default:
@@ -205,6 +202,7 @@ export const initConnection = (): Promise<boolean> =>
       return RNIapIos.canMakePayments();
     },
     android: async () => {
+      await detectInstallSourceAndroid();
       const myRNIapModule = getAndroidModule();
       if (!RNIapModule || !RNIapAmazonModule) {
         return Promise.resolve();
@@ -245,8 +243,8 @@ export const endConnectionAndroid = (): Promise<void> => {
   return Platform.select({
     ios: async () => Promise.resolve(),
     android: async () => {
-      switch(iapInstallSource) {
-        case InstallSource.AMAZON:
+      switch(iapInstallSourceAndroid) {
+        case InstallSourceAndroid.AMAZON:
           return Promise.resolve();
         default:
           if (!RNIapModule) {
