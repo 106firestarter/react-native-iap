@@ -4,7 +4,7 @@
   "description": "React Native In App Purchase Module.",
   "main": "index.js",
   "types": "index.d.ts",
-  "postinstall": "dooboolab-welcome postinstall",
+  "postinstall": "npm install && npm run build && dooboolab-welcome postinstall",
   "scripts": {
     "build": "tsc && flowgen index.d.ts -o index.js.flow",
     "flow": "flow",
