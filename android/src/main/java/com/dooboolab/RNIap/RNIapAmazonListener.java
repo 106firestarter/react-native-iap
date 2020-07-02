@@ -66,19 +66,24 @@ public class RNIapAmazonListener implements PurchasingListener {
   public void onProductDataResponse(final ProductDataResponse response) {
       final ProductDataResponse.RequestStatus status = response.getRequestStatus();
       final String requestId = response.getRequestId().toString();
+      Log.d(TAG, "[DEBUG - PLUGIN] @onProductDataResponse");
       Log.d(TAG, "onProductDataResponse: " + requestId + " (" + status + ")");
 
       switch(status) {
       case SUCCESSFUL:
+          Log.d(TAG, "[DEBUG - PLUGIN] @onProductDataResponse - SUCCESSFUL");
           final Map<String, Product> productData = response.getProductData();
           final Set<String> unavailableSkus = response.getUnavailableSkus();
 
+          Log.d(TAG, "[DEBUG - PLUGIN] @onProductDataResponse - productData " + productData.toString());
+          Log.d(TAG, "[DEBUG - PLUGIN] @onProductDataResponse - unavailableSkus " + unavailableSkus.toString());
           WritableNativeArray items = new WritableNativeArray();
 
           NumberFormat format = NumberFormat.getCurrencyInstance();
           for (Map.Entry<String, Product> skuDetails : productData.entrySet()) {
           Product product = skuDetails.getValue();
 
+          Log.d(TAG, "[DEBUG - PLUGIN] @onProductDataResponse - product " + product.toString());
           if (!skus.contains(product)) {
               skus.add(product);
           }
@@ -92,7 +97,7 @@ public class RNIapAmazonListener implements PurchasingListener {
               priceNumber = format.parse(priceString);
               }
           } catch (ParseException e) {
-              Log.w(TAG, "onProductDataResponse: Failed to parse price for product: " + product.getSku());
+              Log.w(TAG, "[DEBUG - PLUGIN]  onProductDataResponse: Failed to parse price for product: " + product.getSku());
           }
 
           WritableMap item = Arguments.createMap();
@@ -133,13 +138,16 @@ public class RNIapAmazonListener implements PurchasingListener {
       //Log.d(TAG, "onPurchaseUpdatesResponse: requestId (" + response.getRequestId()
       //             + ") purchaseUpdatesResponseStatus (" + response.getRequestStatus()
       //             + ") userId (" + response.getUserData().getUserId() + ")");
-      Log.d(TAG, "onPurchaseUpdatesResponse: " + response.toString());
+      Log.d(TAG, "[DEBUG - PLUGIN] @onPurchaseUpdatesResponse");
+      Log.d(TAG, "[DEBUG - PLUGIN] onPurchaseUpdatesResponse: " + response.toString());
       final PurchaseUpdatesResponse.RequestStatus status = response.getRequestStatus();
       switch(status) {
       case SUCCESSFUL:
+          Log.d(TAG, "[DEBUG - PLUGIN] @onPurchaseUpdatesResponse");
           UserData userData = response.getUserData();
           WritableMap promiseItem = null;
           final List<Receipt> purchases = response.getReceipts();
+          Log.d(TAG, "[DEBUG - PLUGIN] @onPurchaseUpdatesResponse - purchases " +purchases.toString());
           for (Receipt receipt : purchases) {
             WritableMap item = Arguments.createMap();
             item.putString("productId", receipt.getSku());
@@ -181,40 +189,66 @@ public class RNIapAmazonListener implements PurchasingListener {
 
   @Override
   public void onPurchaseResponse(final PurchaseResponse response) {
+      Log.d(TAG, "[DEBUG - PLUGIN] @onPurchaseResponse");
       final String requestId = response.getRequestId().toString();
       final String userId = response.getUserData().getUserId();
       final PurchaseResponse.RequestStatus status = response.getRequestStatus();
       //Log.d(TAG, "onPurchaseResponse: requestId (" + requestId + ") userId ("
       //             + userId + ") purchaseRequestStatus (" + status + ")");
-      Log.d(TAG, "onPurchaseResponse: " + response.toString());
+      Log.d(TAG, "[DEBUG - PLUGIN] onPurchaseResponse: " + response.toString());
       switch(status) {
       case SUCCESSFUL:
-          final Receipt receipt = response.getReceipt();
-          final UserData userData = response.getUserData();
-          WritableMap item = Arguments.createMap();
-          item.putString("productId", receipt.getSku());
-          item.putDouble("transactionDate", receipt.getPurchaseDate().getTime());
-          item.putString("purchaseToken", receipt.getReceiptId());
-          item.putString("originalJson", receipt.toJSON().toString());
-          item.putString("userIdAmazon", userData.getUserId());
-          item.putString("userMarketplaceAmazon", userData.getMarketplace());
-          item.putString("userJsonAmazon", userData.toJSON().toString());
-          sendEvent(reactContext, "purchase-updated", item);
+            Log.d(TAG, "[DEBUG - PLUGIN] @onPurchaseResponse");
+            final Receipt receipt = response.getReceipt();
+            final UserData userData = response.getUserData();
+            WritableMap item = Arguments.createMap();
+            item.putString("productId", receipt.getSku());
+            item.putDouble("transactionDate", receipt.getPurchaseDate().getTime());
+            item.putString("purchaseToken", receipt.getReceiptId());
+            item.putString("originalJson", receipt.toJSON().toString());
+            item.putString("userIdAmazon", userData.getUserId());
+            item.putString("userMarketplaceAmazon", userData.getMarketplace());
+            item.putString("userJsonAmazon", userData.toJSON().toString());
+            sendEvent(reactContext, "purchase-updated", item);
 
-          DoobooUtils.getInstance().resolvePromisesForKey(RNIapAmazonModule.PROMISE_GET_PRODUCT_DATA, true);
-          break;
+            DoobooUtils.getInstance().resolvePromisesForKey(RNIapAmazonModule.PROMISE_GET_PRODUCT_DATA, true);
+            break;
       case ALREADY_PURCHASED:
-          DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_ALREADY_PURCHASED, null, null);
-          break;
+            // WritableMap error_501 = Arguments.createMap();
+            // error_501.putInt("responseCode", 501);
+            // error_501.putString("debugMessage", "Purchase Failed.");
+            // error_501.putString("code", "501");
+            // error_501.putString("message", "ALREADY_PURCHASED while performing the purchase.");
+            // sendEvent(reactContext, "purchase-error", error_501);
+            DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_ALREADY_PURCHASED, null, null);
+            break;
       case FAILED:
-          DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_FAILED, null, null);
-          break;
+            // WritableMap error_502 = Arguments.createMap();
+            // error_502.putInt("responseCode", 502);
+            // error_502.putString("debugMessage", "Purchase Failed.");
+            // error_502.putString("code", "502");
+            // error_502.putString("message", "FAILED while performing the purchase.");
+            // sendEvent(reactContext, "purchase-error", error_502);
+            DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_FAILED, null, null);
+            break;
       case INVALID_SKU:
-          DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_INVALID_SKU, null, null);
-          break;
+            // WritableMap error_503 = Arguments.createMap();
+            // error_503.putInt("responseCode", 503);
+            // error_503.putString("debugMessage", "Purchase Failed.");
+            // error_503.putString("code", "503");
+            // error_503.putString("message", "INVALID_SKU while performing the purchase.");
+            // sendEvent(reactContext, "purchase-error", error_503);
+            DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_INVALID_SKU, null, null);
+            break;
       case NOT_SUPPORTED:
-          DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_NOT_SUPPORTED, null, null);
-          break;
+            // WritableMap error_504 = Arguments.createMap();
+            // error_504.putInt("responseCode", 504);
+            // error_504.putString("debugMessage", "Purchase Failed.");
+            // error_504.putString("code", "504");
+            // error_504.putString("message", "NOT_SUPPORTED while performing the purchase.");
+            // sendEvent(reactContext, "purchase-error", error_504);
+            DoobooUtils.getInstance().rejectPromisesForKey(RNIapAmazonModule.PROMISE_BUY_ITEM, E_PURCHASE_RESPONSE_NOT_SUPPORTED, null, null);
+            break;
       }
   }
 
@@ -222,7 +256,7 @@ public class RNIapAmazonListener implements PurchasingListener {
   public void onUserDataResponse(final UserDataResponse response) {
       //Log.d(TAG, "onGetUserDataResponse: requestId (" + response.getRequestId()
       //             + ") userIdRequestStatus: " + response.getRequestStatus() + ")");
-      Log.d(TAG, "onGetUserDataResponse: " + response.toString());
+      Log.d(TAG, "[DEBUG - PLUGIN] onGetUserDataResponse: " + response.toString());
       final UserDataResponse.RequestStatus status = response.getRequestStatus();
       switch(status) {
       case SUCCESSFUL:

@@ -94,11 +94,13 @@ public class RNIapAmazonModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void initConnection(final Promise promise) {
+    Log.d(TAG, "[DEBUG - PLUGIN] Initiated connections with plugin");
     promise.resolve(true);
   }
 
   @ReactMethod
   public void getItemsByType(final String type, final ReadableArray skuArr, final Promise promise) {
+    Log.d(TAG, "[DEBUG - PLUGIN] @getItemsByType");
     final Set <String>productSkus = new HashSet<String>();
     for (int ii = 0, skuSize = skuArr.size(); ii < skuSize; ii++) {
       productSkus.add(skuArr.getString(ii));
@@ -123,25 +125,27 @@ public class RNIapAmazonModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void acknowledgePurchase(final String token, final String developerPayLoad, final Promise promise) {
-    Log.d(TAG, "acknowledgePurchase " + token);
+    Log.d(TAG, "[DEBUG - PLUGIN]  acknowledgePurchase " + token);
     PurchasingService.notifyFulfillment(token, FulfillmentResult.FULFILLED);
     promise.resolve(true);
   }
 
   @ReactMethod
   public void consumeProduct(final String token, final String developerPayLoad, final Promise promise) {
-    Log.d(TAG, "consumeProduct " + token);
+    Log.d(TAG, "[DEBUG - PLUGIN]  consumeProduct " + token);
     PurchasingService.notifyFulfillment(token, FulfillmentResult.FULFILLED);
     promise.resolve(true);
   }
 
   private void sendUnconsumedPurchases(final Promise promise) {
+    Log.d(TAG, "[DEBUG - PLUGIN] @sendUnconsumedPurchases");
     PurchasingService.getPurchaseUpdates(true);
     DoobooUtils.getInstance().addPromiseForKey(PROMISE_QUERY_PURCHASES, promise);
   }
 
   @ReactMethod
   public void startListening(final Promise promise) {
+    Log.d(TAG, "[DEBUG - PLUGIN] @startListening");
     sendUnconsumedPurchases(promise);
   }
 
